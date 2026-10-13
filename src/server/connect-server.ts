@@ -149,6 +149,8 @@ export interface IConnectServerOptions {
   logger?: RuntimeLogger;
   compressApiResponses?: boolean;
   serveDocumentation?: boolean;
+  /** Seconds the OAuth completion page waits before closing its window. `0` closes it as soon as it loads. */
+  oauthCompletionCloseDelaySeconds?: number;
   marketplace?: MarketplaceService;
   saasProject?: SaasProjectService;
   saas?: SaasExecutionService;
@@ -1435,7 +1437,7 @@ export class ConnectServer {
       throw error;
     }
 
-    return context.html(renderOAuthCompletionPage(service));
+    return context.html(renderOAuthCompletionPage(service, this.options.oauthCompletionCloseDelaySeconds));
   }
 
   private async writeConnectionResult(

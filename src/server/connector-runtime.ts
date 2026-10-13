@@ -100,6 +100,8 @@ export interface ConnectorRuntimeOptions {
   logger?: RuntimeLogger;
   /** The standalone host opts into API-reference HTML. Authorization completion pages are always available. */
   apiReference?: boolean;
+  /** Seconds the OAuth completion page waits before closing its window. Defaults to 5; `0` closes it as soon as it loads. */
+  oauthCompletionCloseDelaySeconds?: number;
 }
 
 /** Standard web requests are the host boundary; credentials, databases and framework objects stay private. */
@@ -226,6 +228,7 @@ async function openRuntime(options: ConnectorRuntimeOptions): Promise<ConnectorR
       allowedCustomOAuth: options.allowedCustomOAuth,
       logger: options.logger,
       serveDocumentation: options.apiReference ?? false,
+      oauthCompletionCloseDelaySeconds: options.oauthCompletionCloseDelaySeconds,
     });
     saasCleanup.start();
     triggerMaintenance.start();
