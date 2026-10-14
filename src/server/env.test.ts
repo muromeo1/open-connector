@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readNonNegativeInteger } from "./cloudflare-env.ts";
+import { readNonNegativeInteger } from "./env.ts";
 
 describe("readNonNegativeInteger", () => {
   it("reads zero and positive integers", () => {
@@ -8,7 +8,7 @@ describe("readNonNegativeInteger", () => {
   });
 
   it("falls back for missing, empty, negative, and non-integer values", () => {
-    for (const value of [undefined, "", "  ", "-1", "1.5", "abc"]) {
+    for (const value of [undefined, "", "  ", "-1", "1.5", "abc", "NaN", "Infinity"]) {
       expect(readNonNegativeInteger(value, 5), String(value)).toBe(5);
     }
   });

@@ -244,11 +244,11 @@ a.button{text-decoration:none}
 export const oauthCompletionLocaleScript = `const pick=()=>{try{const stored=localStorage.getItem("oomol-connect.lang");if(Object.hasOwn(STR,stored))return stored;}catch{}const langs=navigator.languages&&navigator.languages.length?navigator.languages:[navigator.language||"en"];for(const raw of langs){const l=String(raw).toLowerCase();if(l.startsWith("zh"))return (!l.includes("hans")&&(l.includes("tw")||l.includes("hk")||l.includes("mo")||l.includes("hant")))?"zh-TW":"zh-CN";const primary=l.split("-")[0];if(STR[raw])return raw;if(STR[primary])return primary;}return "en";};`;
 
 /** Seconds the OAuth completion page counts down before it tries to close its window. */
-export const DEFAULT_OAUTH_COMPLETION_CLOSE_DELAY_SECONDS = 5;
+export const DEFAULT_OAUTH_CLOSE_DELAY_SECONDS = 5;
 
 export function renderOAuthCompletionPage(
   service: string,
-  closeDelaySeconds: number = DEFAULT_OAUTH_COMPLETION_CLOSE_DELAY_SECONDS,
+  closeDelaySeconds: number = DEFAULT_OAUTH_CLOSE_DELAY_SECONDS,
 ): string {
   const payload = scriptJson({
     type: oauthCompletedType,

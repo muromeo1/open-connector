@@ -12,7 +12,7 @@ import { ActionPolicyService } from "../core/action-policy.ts";
 import { setEgressTrustedHosts, setPrivateNetworkAccessAllowed } from "../core/request.ts";
 import { ProviderLoader } from "../providers/provider-loader.ts";
 import { executorModules } from "../providers/registry.generated.ts";
-import { DEFAULT_OAUTH_COMPLETION_CLOSE_DELAY_SECONDS } from "./api/oauth-completion-page.ts";
+import { DEFAULT_OAUTH_CLOSE_DELAY_SECONDS } from "./api/oauth-completion-page.ts";
 import { createRuntimeJwtVerifier } from "./api/runtime-jwt.ts";
 import { createConnectApp } from "./connect-app.ts";
 import { getConnectorAssetDirectory } from "./connector-assets.ts";
@@ -102,7 +102,7 @@ export interface ConnectorRuntimeOptions {
   /** The standalone host opts into API-reference HTML. Authorization completion pages are always available. */
   apiReference?: boolean;
   /** Seconds the OAuth completion page waits before closing its window. Defaults to 5; `0` closes it as soon as it loads. */
-  oauthCompletionCloseDelaySeconds?: number;
+  oauthCloseDelaySeconds?: number;
 }
 
 /** Standard web requests are the host boundary; credentials, databases and framework objects stay private. */
@@ -149,10 +149,9 @@ async function openRuntime(options: ConnectorRuntimeOptions): Promise<ConnectorR
   if (!Number.isFinite(ttlSeconds) || ttlSeconds <= 0)
     throw new Error("transitFiles.ttlSeconds must be a positive number of seconds.");
   if (!Number.isFinite(maxBytes) || maxBytes <= 0) throw new Error("transitFiles.maxBytes must be a positive number.");
-  const oauthCompletionCloseDelaySeconds =
-    options.oauthCompletionCloseDelaySeconds ?? DEFAULT_OAUTH_COMPLETION_CLOSE_DELAY_SECONDS;
-  if (!Number.isInteger(oauthCompletionCloseDelaySeconds) || oauthCompletionCloseDelaySeconds < 0)
-    throw new Error("oauthCompletionCloseDelaySeconds must be a non-negative integer of seconds.");
+  const oauthCloseDelaySeconds = options.oauthCloseDelaySeconds ?? DEFAULT_OAUTH_CLOSE_DELAY_SECONDS;
+  if (!Number.isInteger(oauthCloseDelaySeconds) || oauthCloseDelaySeconds < 0)
+    throw new Error("oauthCloseDelaySeconds must be a non-negative integer of seconds.");
   const assetDirectory = getConnectorAssetDirectory();
   const assets = options.assets ?? {
     catalogDir: join(assetDirectory, "catalog/apps"),
@@ -233,7 +232,7 @@ async function openRuntime(options: ConnectorRuntimeOptions): Promise<ConnectorR
       allowedCustomOAuth: options.allowedCustomOAuth,
       logger: options.logger,
       serveDocumentation: options.apiReference ?? false,
-      oauthCompletionCloseDelaySeconds,
+      oauthCloseDelaySeconds,
     });
     saasCleanup.start();
     triggerMaintenance.start();

@@ -1543,93 +1543,63 @@ describe("ConnectServer", () => {
     });
   });
 
-  it("lists OAuth connections after the callback completes", async () => {
-    const app = createTestServer([oauthProvider]).createApp();
-    const config = await app.request("/api/oauth/configs/oauth_example", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        clientId: "client-id",
-        clientSecret: "client-secret",
-        secretExtra: {
-          appBearerToken: "app-token",
+  it.each([undefined, 0, 3])(
+    "lists OAuth connections after the callback completes with close delay %s",
+    async (oauthCloseDelaySeconds) => {
+      const app = createTestServer([oauthProvider], { oauthCloseDelaySeconds }).createApp();
+      const config = await app.request("/api/oauth/configs/oauth_example", {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          clientId: "client-id",
+          clientSecret: "client-secret",
+          secretExtra: {
+            appBearerToken: "app-token",
+          },
+        }),
+      });
+      expect(config.status).toBe(200);
+      const authorization = await app.request("/api/oauth/authorizations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ service: "oauth_example" }),
+      });
+      expect(authorization.status).toBe(200);
+      const { state } = (await authorization.json()) as { state: string };
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async () => Response.json({ access_token: "access-token", token_type: "Bearer" })),
+      );
+
+      const callback = await app.request(`/oauth/callback?state=${state}&code=example-code`);
+      const callbackText = await callback.text();
+
+      expect(callback.status, callbackText).toBe(200);
+      expect(callbackText).toContain("BroadcastChannel");
+      expect(callbackText).toContain('"type":"oauth.completed"');
+      expect(callbackText).toContain('"service":"oauth_example"');
+      expect(callbackText).not.toContain("window.opener");
+      expect(callbackText).not.toContain('postMessage(message,"*"');
+      expect(callbackText).toContain("Connection complete");
+      expect(callbackText).toContain("Close this window to continue where you started.");
+      expect(callbackText).not.toContain("OOMOL Connect");
+      expect(callbackText).toContain("card");
+      expect(callbackText).toContain("badge");
+      expect(callbackText).toContain(`Automatically closing in ${oauthCloseDelaySeconds ?? 5} seconds.`);
+      expect(callbackText).toContain(`let remaining=${oauthCloseDelaySeconds ?? 5};`);
+      expect(callbackText).toContain("setTimeout");
+      expect(callbackText).toContain("window.close()");
+      const connections = await app.request("/api/connections");
+      expect(connections.status).toBe(200);
+      await expect(connections.json()).resolves.toMatchObject([
+        {
+          service: "oauth_example",
+          authType: "oauth2",
+          configured: true,
         },
-      }),
-    });
-    expect(config.status).toBe(200);
-    const authorization = await app.request("/api/oauth/authorizations", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ service: "oauth_example" }),
-    });
-    expect(authorization.status).toBe(200);
-    const { state } = (await authorization.json()) as { state: string };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => Response.json({ access_token: "access-token", token_type: "Bearer" })),
-    );
-
-    const callback = await app.request(`/oauth/callback?state=${state}&code=example-code`);
-    const callbackText = await callback.text();
-
-    expect(callback.status, callbackText).toBe(200);
-    expect(callbackText).toContain("BroadcastChannel");
-    expect(callbackText).toContain('"type":"oauth.completed"');
-    expect(callbackText).toContain('"service":"oauth_example"');
-    expect(callbackText).not.toContain("window.opener");
-    expect(callbackText).not.toContain('postMessage(message,"*"');
-    expect(callbackText).toContain("Connection complete");
-    expect(callbackText).toContain("Close this window to continue where you started.");
-    expect(callbackText).not.toContain("OOMOL Connect");
-    expect(callbackText).toContain("card");
-    expect(callbackText).toContain("badge");
-    expect(callbackText).toContain("Automatically closing in 5 seconds.");
-    expect(callbackText).toContain("setTimeout");
-    expect(callbackText).toContain("window.close()");
-    const connections = await app.request("/api/connections");
-    expect(connections.status).toBe(200);
-    await expect(connections.json()).resolves.toMatchObject([
-      {
-        service: "oauth_example",
-        authType: "oauth2",
-        configured: true,
-      },
-    ]);
-  });
-
-  it("renders the OAuth completion page with the configured close delay", async () => {
-    const app = createTestServer([oauthProvider], { oauthCompletionCloseDelaySeconds: 0 }).createApp();
-    const config = await app.request("/api/oauth/configs/oauth_example", {
-      method: "PUT",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        clientId: "client-id",
-        clientSecret: "client-secret",
-        secretExtra: {
-          appBearerToken: "app-token",
-        },
-      }),
-    });
-    expect(config.status).toBe(200);
-    const authorization = await app.request("/api/oauth/authorizations", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ service: "oauth_example" }),
-    });
-    expect(authorization.status).toBe(200);
-    const { state } = (await authorization.json()) as { state: string };
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => Response.json({ access_token: "access-token", token_type: "Bearer" })),
-    );
-
-    const callback = await app.request(`/oauth/callback?state=${state}&code=example-code`);
-    const callbackText = await callback.text();
-
-    expect(callback.status, callbackText).toBe(200);
-    expect(callbackText).toContain("let remaining=0;");
-    expect(callbackText).toContain("Automatically closing in 0 seconds.");
-  });
+      ]);
+    },
+  );
 
   it("keeps the console shell public while protecting admin APIs", async () => {
     const staticRoot = await createTestStaticRoot();
@@ -3935,7 +3905,7 @@ interface CreateTestServerOptions {
   uploadTransitFile?: (request: Request) => Promise<TransitFileUpload>;
   secretCodec?: ISecretCodec;
   allowedCustomOAuth?: string[];
-  oauthCompletionCloseDelaySeconds?: number;
+  oauthCloseDelaySeconds?: number;
 }
 
 function createTestServer(providers: ProviderDefinition[], options: CreateTestServerOptions = {}): ConnectServer {
@@ -4014,7 +3984,7 @@ function createTestServer(providers: ProviderDefinition[], options: CreateTestSe
     actionPolicy: options.actionPolicy,
     actionSearch: options.actionSearch,
     logger: options.logger,
-    oauthCompletionCloseDelaySeconds: options.oauthCompletionCloseDelaySeconds,
+    oauthCloseDelaySeconds: options.oauthCloseDelaySeconds,
   });
 }
 

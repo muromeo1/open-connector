@@ -29,13 +29,4 @@ describe("renderOAuthCompletionPage", () => {
     expect(html).toContain("现在可以手动关闭此窗口。");
     expect(html).toContain("navigator.languages");
   });
-
-  it("counts down from the configured close delay", () => {
-    expect(renderOAuthCompletionPage("github")).toContain("let remaining=5;");
-
-    const html = renderOAuthCompletionPage("github", 0);
-
-    expect(html).toContain("let remaining=0;");
-    expect(html).toContain("Automatically closing in 0 seconds.");
-  });
 });
